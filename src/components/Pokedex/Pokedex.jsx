@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Switch, Route } from 'react-router-dom';
-import { Card, Button, Container, Row, Col, Form, Pagination } from 'react-bootstrap';
+import { Card, Button, Container, Row, Col, Form, Pagination, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Logo from '../../images/logo.svg';
 import GBA from '../../images/8bits.png';
@@ -16,6 +16,7 @@ const Pokedex = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [showOriginalImages, setShowOriginalImages] = useState(true);
+  const [loading, setLoading] = useState(true); // Estado de carga
   const itemsPerPage = 12;
 
   useEffect(() => {
@@ -27,15 +28,15 @@ const Pokedex = () => {
         const allPokemon = await Promise.all(data.results.map(async (pokemon) => {
           const pokemonResponse = await fetch(pokemon.url);
           const pokemonData = await pokemonResponse.json();
-          const pokemonImageOriginal = pokemonData.sprites.front_default
+          const pokemonImageOriginal = pokemonData.sprites.front_default;
           const imageUrl = `https://img.pokemondb.net/artwork/${pokemon.name}.jpg`;
           const image = showOriginalImages
             ? pokemonImageOriginal
             : await checkImageAvailability(imageUrl)
               ? imageUrl
               : pokemonImageOriginal;
-          
-          const noImage = 'https://r2.easyimg.io/u0k0s39qc/sticker-png-pikachu-crying-pokemon-pikachu.png'
+
+          const noImage = 'https://r2.easyimg.io/u0k0s39qc/sticker-png-pikachu-crying-pokemon-pikachu.png';
 
           return {
             name: pokemon.name,
@@ -48,10 +49,12 @@ const Pokedex = () => {
         const totalPokemonCount = data.count;
         const totalPages = Math.ceil(totalPokemonCount / itemsPerPage);
         setTotalPages(totalPages);
+        setLoading(false); // Datos cargados
       } catch (error) {
         console.error('Error al obtener la lista completa de Pokémon', error);
         setAllPokemonList([]);
         setTotalPages(1);
+        setLoading(false); // En caso de error, dejar de mostrar la pantalla de carga
       }
     };
 
@@ -59,17 +62,14 @@ const Pokedex = () => {
   }, [showOriginalImages]);
 
   const fetchFilteredPokemon = () => {
-    // Filtrar por término de búsqueda
     const filteredBySearch = searchTerm
       ? allPokemonList.filter((pokemon) => pokemon.name.toLowerCase().includes(searchTerm.toLowerCase()))
       : allPokemonList;
 
-    // Filtrar por tipos seleccionados
     const filteredByType = selectedTypes.length > 0
       ? filteredBySearch.filter((pokemon) => pokemon.details.types.some((type) => selectedTypes.includes(type.type.name)))
       : filteredBySearch;
 
-      // Calcular el rango de Pokémon a mostrar en la página actual
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const limitedPokemonList = filteredByType.slice(startIndex, endIndex);
@@ -131,14 +131,21 @@ const Pokedex = () => {
   };
 
   const getAllPokemonTypes = () => {
-    // Obten todos los tipos únicos de Pokémon de la lista completa
     const allTypes = allPokemonList
       .flatMap((pokemon) => pokemon.details.types.map((type) => type.type.name))
       .filter((value, index, self) => self.indexOf(value) === index);
     return allTypes;
   };
 
-  
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <Spinner animation="border" role="status">
+          <span className="sr-only">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
 
   return (
     <div className='my-3 pokedex-container d-flex flex-wrap'>
@@ -168,6 +175,7 @@ const Pokedex = () => {
               key={type}
               variant={selectedTypes.includes(type) ? "danger" : "warning"}
               onClick={() => handleTypeSelect(type)}
+              style={{ transition: 'background-color 0.3s ease' }}
             >
               <TypeIcon type={type} />
             </Button>
@@ -185,7 +193,12 @@ const Pokedex = () => {
         <div className='pokedex-card-container'>
           {pokemonList.map((pokemon, index) => (
             <Col key={index} xs={12} sm={6} md={4} lg={3} className="my-3">
-              <Card className="pokemon-card">
+              <Card
+                className="pokemon-card"
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                style={{ transition: 'transform 0.3s ease' }}
+              >
                 <Card.Img
                   variant="top"
                   src={pokemon.image}
@@ -226,7 +239,6 @@ const Pokedex = () => {
             )}
           </Col>
         </Row>
-
       </Container>
     </div>
   );
