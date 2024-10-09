@@ -72,6 +72,7 @@ body, html {
 .pokemon-card {
   margin: 5%;
   border: 2.2px solid black;
+  background-color: aliceblue;
 }
 
 .poke-logo img{ 
